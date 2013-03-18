@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# Basic Cisco type 4 - password encoder / decoder by Kost, Dhiru
+# Basic Cisco type 4 - password decoder by Kost, Dhiru
 # and magnum
 #
 # Usage Examples:
@@ -24,7 +24,7 @@
 # magnum : Change cisco2john.pl so it reads a Cisco config file and outputs
 # any clear-text or deobfuscated passwords, and outputs hashes in JtR format.
 #
-# Base64 custom encoder / decoder taken from VOMS::Lite::Base64
+# Base64 custom decoder taken from VOMS::Lite::Base64
 # This module was originally designed for the JISC funded SARoNGS project at developed at
 #
 # The University of Manchester.
@@ -44,27 +44,9 @@ die "Usage: $0 [cisco config file] [...]\n" if ($ARGV[0] =~ /-h/);
 
 my $seedNotice = 1;
 
-my %Alphabets = ( VOMS => "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789[]",
-                  RFC3548 => "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",
-                  RFC3548URL => "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-=",
-                  CISCO => "./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",                );
-
-sub Encode{
-  my $data = shift;
-  my $str = shift;  # Can supply custom Base64
-  my $pad="";
-  if ( defined $str ) {
-    $str = $Alphabets{$str} if ($Alphabets{$str});
-    if ( $str =~ /^(.{64})(.?)$/s ) { $str=$1; $pad="$2"; }
-    else { return undef; }
-  }
-  else { $str = $Alphabets{'CISCO'}; }
-  $data=~s|(.)(.?)(.?)| substr($str,((ord($1)&252)>>2),1).
-                        substr($str,((ord($1)&3)<<4)+((ord($2)&240)>>4),1).
-                        ((length($2))?substr($str,((ord($2)&15)<<2)+((ord($3)&192)>>6),1):$pad).
-                        ((length($3))?substr($str,(ord($3)&63),1):$pad)|gse;
-  return $data;
-}
+my %Alphabets = (
+	CISCO => "./0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",                
+	);
 
 sub Decode {
   my $data = shift;
@@ -75,9 +57,8 @@ sub Decode {
   if ( defined $str && ! defined $Alphabets{$str} )  { $type = 'USER'; }
   elsif ( defined $str && defined $Alphabets{$str} ) { $type = $str; }
   #Try to guess
-  elsif ( $data =~ /[\[\]]/s && $data !~ /[+\/_-]/ ) { $type = 'VOMS'; }
-  elsif ( $data =~ /[_-]/s && $data !~ /[\[\]+\/]/)  { $type = 'RFC3548URL'; }
-  else                                               { $type = 'RFC3548'; } # Assume Standard Base64 if
+  elsif ( $data =~ /[\.\/]/s && $data !~ /[+\/_-]/ ) { $type = 'CISCO'; }
+  else                                               { $type = 'CISCO'; } # Assume Standard Base64 if
   if ( $type eq "USER" )                             { $Alphabets{'USER'} = $str; }
 
   #strip non-base64 chars
